@@ -271,6 +271,13 @@ class DiceScraper:
             'scraped_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
 
+    def _scrape_single_job(self, search_url, job_url):
+        """Fetches and parses a single job page"""
+        resp = self._safe_request(job_url, referer=search_url)
+        if resp:
+            return self._parse_job_detail(resp.text, job_url, search_url)
+        return None
+
     def _scrape_single_search(self, row, existing_urls):
         search_url = row.get('Dice Search Link') or row.get('Dice Job Link')
         if not search_url:
