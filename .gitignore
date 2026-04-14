@@ -8,3 +8,4 @@ env/
 .idea/
 1.py
 2.py
+.ruff_cache

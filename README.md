@@ -2,104 +2,201 @@
 
 A high-performance scraping pipeline that automates the collection and cleaning of job data from Dice.com, integrated directly with Google Sheets.
 
-## 📊 Spreadsheet Structure
+## Architecture
 
-The system uses a set of specific tabs in Google Sheets to manage inputs and outputs. Both pipelines follow a **Search -> Store -> Scrape** flow.
+The backend uses a **microservices architecture** for better performance, scalability, and fault isolation:
+
+```
+backend/
+├── services/
+│   ├── common/           # Shared config, state, sheets manager
+│   │   ├── __init__.py  # AppState, scraper_config, constants
+│   │   └── sheets.py     # Google Sheets integration
+│   ├── api/              # HTTP API Gateway (port 8000)
+│   │   └── main.py       # REST endpoints for frontend
+│   ├── scraper/          # Scraping Worker (port 8001)
+│   │   ├── main.py       # FastAPI worker service
+│   │   └── service.py    # DiceScraper class, async pipeline
+│   ├── scheduler/         # Scheduler Service (port 8002)
+│   │   └── service.py    # Time-based job scheduling
+│   ├── run.py            # Unified entry point
+│   └── README.md         # Detailed microservices docs
+├── main.py               # Simplified entry (uses services/)
+├── scraper.py            # Legacy (deprecated)
+├── sheets.py             # Legacy (deprecated)
+└── config.py             # Legacy (deprecated)
+```
+
+## Services
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| **API Gateway** | 8000 | REST API for frontend, handles requests/responses |
+| **Scraper Worker** | 8001 | Executes scraping jobs, parallel processing |
+| **Scheduler** | 8002 | Time-based scheduling, triggers scraper |
+
+## Running Modes
+
+### All-in-One (Default - Recommended for Development)
+
+```bash
+cd backend
+python main.py
+```
+
+All services run in a single process on port 8000.
+
+### Separate Services (Production)
+
+```bash
+# Terminal 1 - API Gateway
+python backend/services/run.py --service api
+
+# Terminal 2 - Scraper Worker
+python backend/services/run.py --service scraper
+
+# Terminal 3 - Scheduler
+python backend/services/run.py --service scheduler
+```
+
+## Performance Features
+
+- **Async Pipeline**: Non-blocking I/O for faster operations
+- **Parallel Processing**: ThreadPoolExecutor for concurrent job scraping
+- **Connection Pooling**: Reuses HTTP connections
+- **Batch Processing**: 50 jobs per batch to Google Sheets
+- **Fault Isolation**: One service failure doesn't crash others
+
+---
+
+## Spreadsheet Structure
+
+The system uses specific tabs in Google Sheets for inputs and outputs.
 
 ### 1. Active Vendor Pipeline
 
-| Purpose                         | Sheet Name              | Expected Columns                      |
-| :------------------------------ | :---------------------- | :------------------------------------ |
-| **Input Source**          | `input-active`        | `Vendor Name`, `Dice Search Link` |
-| **Intermediate Tracking** | `active-dice-jobs`    | `dice_search_url`, `job_url`      |
-| **Final Details**         | `active-scraped-data` | Full Cleaned Job Details (11 columns) |
+| Purpose | Sheet Name | Expected Columns |
+|---------|------------|-----------------|
+| Input Source | `input-active` | `Vendor Name`, `Dice Search Link` |
+| Intermediate Tracking | `active-dice-jobs` | `dice_search_url`, `job_url` |
+| Final Details | `active-scraped-data` | Full Cleaned Job Details |
 
 ### 2. Inactive Vendor Pipeline
 
-| Purpose                         | Sheet Name                | Expected Columns                                      |
-| :------------------------------ | :------------------------ | :---------------------------------------------------- |
-| **Input Source**          | `input-inactive`        | `VENDOR NAME`, `Dice Job Link` (Flexible headers) |
-| **Intermediate Tracking** | `inactive-dice-jobs`    | `dice_search_url`, `job_url`                      |
-| **Final Details**         | `inactive-scraped-data` | Full Cleaned Job Details (11 columns)                 |
-
-> [!TIP]
-> **Flexible Header Matching:** The `input-inactive` sheet is configured with flexible matching. It will correctly recognize either `VENDOR NAME` or `Vendor Name`, and either `Dice Job Link` or `Dice Search Link`.
+| Purpose | Sheet Name | Expected Columns |
+|---------|------------|-----------------|
+| Input Source | `input-inactive` | `VENDOR NAME`, `Dice Job Link` |
+| Intermediate Tracking | `inactive-dice-jobs` | `dice_search_url`, `job_url` |
+| Final Details | `inactive-scraped-data` | Full Cleaned Job Details |
 
 ---
 
-## 🚀 Workflow Overview
-
-The system operates in three stages:
-
-1. **Data Ingestion (Input)**: The script reads search criteria from the input tabs listed above.
-2. **Search & Filter**: For each vendor link, the script automatically appends `filters.postedDate=ONE` to ensure only jobs from the **past 24 hours** are processed.
-3. **URL Tracking (Intermediate)**: New job URLs are added to their respective tracking sheets to ensure we never scrape the same job twice.
-4. **Detail Scraping & Cleaning (Output)**: The script visits each new URL, extracts key data, and stores the final result in the scraped-data sheets.
-
----
-
-## 🛠 Setup & Installation
+## Setup & Installation
 
 ### 1. Prerequisites
 
-- Python 3.12+
-- Google Cloud Service Account Credentials (`.json` file).
+- Python 3.11+
+- Google Cloud Service Account Credentials (`.json` file)
 
 ### 2. Dependencies
 
-Install the required Python libraries:
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Environment Configuration
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GSHEET_SPREADSHEET_ID` | Google Sheet ID | **Required** |
+| `SCRAPER_API_KEY` | API authentication key | Optional |
+| `GSHEET_CREDS_FILE` | Service account JSON path | `gen-lang-client-...json` |
+| `PORT` | API Gateway port | `8000` |
+| `SCRAPER_PORT` | Scraper service port | `8001` |
+| `SCHEDULER_PORT` | Scheduler service port | `8002` |
+
+### 4. Google Cloud Configuration
+
+1. Enable **Google Sheets API** and **Google Drive API** in Google Cloud Console
+2. Share your Google Sheet with the `client_email` from your credentials JSON
+3. Grant **Editor** permission
+
+---
+
+## Frontend Dashboard
+
+Modern React + Vite dashboard with real-time updates.
+
+### Features
+- **Mission Control**: Real-time stats, scheduler status
+- **Job Board**: Searchable feed of scraped listings
+- **Settings Hub**: Configurable scraper parameters
+- **Progress Tracking**: Live progress bar during scraping
+
+### Running the Dashboard
 
 ```bash
-pip install gspread google-auth requests beautifulsoup4 pandas
+cd frontend
+npm install
+npm run dev
 ```
 
-### 3. Google Cloud Configuration
-
-1. **Enable APIs**: Visit the Google Cloud Console and enable both the **Google Sheets API** and the **Google Drive API**.
-2. **Share the Sheet**: Open your Google Sheet and share it with the `client_email` found in your credentials JSON:
-   - `sheet-access@gen-lang-client-0722398599.iam.gserviceaccount.com`
-   - Permission: **Editor**.
+Dashboard available at `http://localhost:5173`
 
 ---
 
-## 💻 Usage
+## API Endpoints
 
-Run the master controller script:
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | Health check |
+| GET | `/status` | Current pipeline status |
+| GET | `/jobs` | Paginated job listings |
+| GET | `/stats` | Dashboard statistics |
+| GET | `/settings` | Current scraper settings |
+| POST | `/settings` | Update scraper settings |
+| POST | `/trigger` | Start scraping pipeline |
+| POST | `/stop` | Stop running pipeline |
 
-```powershell
-python 3.py
+All endpoints require `X-API-Key` header (if configured).
+
+---
+
+## Output Columns
+
+| Column | Name | Description |
+|--------|------|-------------|
+| A | `title` | Job Title |
+| B | `company` | Hiring Company |
+| C | `location` | City, State or Remote |
+| D | `salary` | Salary range or rate |
+| E | `posted_date` | ISO timestamp |
+| F | `job_type` | Full-time, Contract, etc. |
+| G | `workplace_type` | Remote, Hybrid, On-site |
+| H | `description` | Full job description (HTML) |
+| I | `skills` | Extracted skills |
+| J | `experience_required` | Years of experience |
+| K | `url` | Permanent Dice URL |
+| L | `keyword` | Search link used |
+| M | `scraped_at` | Scrape timestamp |
+
+---
+
+## Docker Deployment
+
+```bash
+# Build
+cd backend
+docker build -t dice-scraper .
+
+# Run (all-in-one)
+docker run -p 8000:8000 --env-file .env dice-scraper
 ```
 
-### Script Components:
-
-- **`3.py`**: The master controller handling the Google Sheets sync and the full 24h workflow.
-- **`1.py`**: Original script for local CSV-based search scraping (Legacy).
-- **`2.py`**: Original script for local CSV-based job detail scraping (Legacy).
-- **`api.py`**: FastAPI wrapper (Optional) for integrating the scraper with tools like n8n.
-
 ---
 
-## 📊 Output Column Mapping
+## Notes
 
-The final sheets contain the following 11 columns in this exact order:
-
-| Column | Name               | Description                          |
-| :----- | :----------------- | :----------------------------------- |
-| A      | `title`          | Job Title (H1 or JSON-LD)            |
-| B      | `company`        | Hiring Company Name                  |
-| C      | `location`       | City, State or Remote                |
-| D      | `salary`         | Salary range or hourly rate          |
-| E      | `posted_date`    | ISO Timestamp of the post            |
-| F      | `job_type`       | Full-time, Contract, etc.            |
-| G      | `workplace_type` | Remote, Hybrid, or On-site           |
-| H      | `description`    | Full plain-text description          |
-| I      | `url`            | Permanent Dice URL                   |
-| J      | `keyword`        | The search link used for retrieval   |
-| K      | `scraped_at`     | Timestamp of when the data was saved |
-
----
-
-* ⚠️ Notes
-
-- **Dice Anti-Bot**: The script uses pre-configured cookies and headers to minimize blocking.
-- **Time Window**: The "Past 24 Hours" filter is forced by the script to capture only the freshest listings.
+- **Dice Anti-Bot**: Pre-configured headers minimize blocking
+- **24-Hour Filter**: Forces "Past 24 Hours" for fresh listings
+- **Scheduler**: Runs once daily at configured time (default 08:30)
