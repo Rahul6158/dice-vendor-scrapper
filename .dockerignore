@@ -11,8 +11,7 @@ venv/
 .gitignore
 node_modules/
 
-# Hide frontend from backend image
-frontend/
+# Do NOT ignore frontend/ anymore, we need it for the build!
 
 # Credentials are mounted by Render at runtime
 gen-lang-client-*.json
