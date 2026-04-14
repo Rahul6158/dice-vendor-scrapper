@@ -6,8 +6,11 @@ __pycache__/
 env/
 venv/
 .env
-.git
+.env.*
+.git/
 .gitignore
-*.json
-.git
-.gitignore
+node_modules/
+
+# Credentials are mounted by Render at runtime via Secret Files.
+# Do NOT bake them into the image.
+gen-lang-client-*.json
