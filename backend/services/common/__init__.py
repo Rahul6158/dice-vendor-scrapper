@@ -13,8 +13,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger("DiceScraper")
 
-SERVICE_ACCOUNT_FILE = os.getenv(
-    "GSHEET_CREDS_FILE", "gen-lang-client-0722398599-1c103e9e40e4.json"
+SERVICE_ACCOUNT_FILE = (
+    os.getenv("GOOGLE_APPLICATION_CREDENTIALS")   # Render Secret File (preferred)
+    or os.getenv("GSHEET_CREDS_FILE")             # Legacy custom env var
+    or "gen-lang-client-0722398599-1c103e9e40e4.json"  # Local dev fallback
 )
 SPREADSHEET_ID = os.getenv(
     "GSHEET_SPREADSHEET_ID", "18wwnvgoTpAPiqNgaugV1B6fl7zj4bhv-Dww6H5SkRjQ"
