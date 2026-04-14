@@ -3,7 +3,12 @@ __pycache__/
 .env
 venv/
 env/
-*.json
+# Block credentials specifically
+gen-lang-client-*.json
+backend/gen-lang-client-*.json
+
+# Allow other JSON files (like package.json)
+# *.json  <-- Removed this line
 .vscode/
 .idea/
 1.py
