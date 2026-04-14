@@ -287,9 +287,9 @@ def run_all():
     from fastapi.responses import FileResponse
 
     # Serve Static Files (Frontend)
-    # The 'dist' folder will be copied here by the Docker multi-stage build
-    # Based on the Dockerfile, it will be in /app/frontend/dist
-    dist_path = os.path.join(os.path.dirname(_backend_dir), "frontend", "dist")
+    # The 'dist' folder is copied to /app/frontend/dist in the Dockerfile
+    # _backend_dir is /app
+    dist_path = os.path.join(_backend_dir, "frontend", "dist")
     
     if os.path.exists(dist_path):
         logger.info(f"Serving frontend from: {dist_path}")

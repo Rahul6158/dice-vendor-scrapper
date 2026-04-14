@@ -36,9 +36,5 @@ RUN mkdir -p /etc/secrets
 # ── Port ──────────────────────────────────────────────────────────────────────
 EXPOSE 8000
 
-# ── Healthcheck ───────────────────────────────────────────────────────────────
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/')" || exit 1
-
 # ── Entrypoint ────────────────────────────────────────────────────────────────
 CMD ["python", "main.py"]
