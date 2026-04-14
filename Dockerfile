@@ -6,18 +6,19 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PORT=8000
 
-# ── System deps (none needed beyond slim base for this stack) ─────────────────
+# ── Setup ─────────────────────────────────────────────────────────────────────
 WORKDIR /app
 
 # ── Python dependencies (cached layer) ───────────────────────────────────────
-COPY requirements.txt /app/
+# Copy requirements from the backend folder
+COPY backend/requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ── Application source ────────────────────────────────────────────────────────
-COPY . /app/
+# Copy everything from the backend folder into the container
+COPY backend/ /app/
 
 # ── Secret file mount point (Render writes here at runtime) ──────────────────
-# GOOGLE_APPLICATION_CREDENTIALS=/etc/secrets/gen-lang-client-0722398599-1c103e9e40e4.json
 RUN mkdir -p /etc/secrets
 
 # ── Port ──────────────────────────────────────────────────────────────────────
