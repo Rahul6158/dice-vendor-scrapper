@@ -283,6 +283,29 @@ def run_all():
 
     threading.Thread(target=scheduler_loop, daemon=True).start()
 
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.responses import FileResponse
+
+    # Serve Static Files (Frontend)
+    # The 'dist' folder will be copied here by the Docker multi-stage build
+    # Based on the Dockerfile, it will be in /app/frontend/dist
+    dist_path = os.path.join(os.path.dirname(_backend_dir), "frontend", "dist")
+    
+    if os.path.exists(dist_path):
+        logger.info(f"Serving frontend from: {dist_path}")
+        # Mount the assets folder specifically
+        assets_path = os.path.join(dist_path, "assets")
+        if os.path.exists(assets_path):
+            app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
+
+        # Catch-all route to serve index.html for React SPA routing
+        @app.get("/{full_path:path}")
+        async def serve_frontend(full_path: str):
+            index_file = os.path.join(dist_path, "index.html")
+            return FileResponse(index_file)
+    else:
+        logger.warning(f"Frontend build not found at {dist_path}. UI will not be served.")
+
     p = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=p)
 
