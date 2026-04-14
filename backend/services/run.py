@@ -92,9 +92,6 @@ def run_all():
 
     from fastapi import HTTPException, Header
 
-    @app.get("/")
-    def health():
-        return {"status": "ok", "service": "Dice Scraper Pro", "mode": "all-in-one"}
 
     @app.get("/status")
     def get_status(x_api_key: str = Header(None)):
